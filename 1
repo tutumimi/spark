@@ -1,1 +1,45 @@
 @cici tutu it is the first line to test 
+from pyspark.sql.functions import *
+
+info_followers = g.edges.filter("relationship = 'follow'")
+
+followers = info_followers.groupBy('src').count().withColumnRenamed('count','count_followers')
+followed = info_followers.groupBy('dst').count().withColumnRenamed('count','count_befollowed')
+
+allInfo = followers.join(followed,followers['src']==followed['dst'],'left_outer')
+
+zombies = allInfo.filter('count_befollowed is null').orderBy(desc('count_followers'))
+max_value = zombies.groupby().max('count_followers').collect()[0].asDict()['max(count_followers)']
+largest_zombies = zombies.filter(zombies.count_followers == max_value).select('src')
+largest_zombiesName = largest_zombies.join(g.vertices,largest_zombies['src']==g.vertices['id']).select('name')
+largest_zombiesName.show()
+
+
+
+d1=dfDetail.select('*',(dfDetail.UnitPrice * dfDetail. OrderQty * (1 - dfDetail.UnitPriceDiscount))\
+           .alias('netprice'))\
+           .join(dfHeader,'SalesOrderID')\
+           .groupBy('SalesOrderID').sum('netprice')\
+           .withColumnRenamed('sum(netprice)','TotalNetPrice')
+# d1.show()
+
+
+d2=dfHeader.join(d1,'SalesOrderID')
+# d2.show()
+
+d3=dfCustomer.join(d2,'CustomerID','left_outer').select('SalesPerson','TotalNetPrice')
+d3.show()
+
+d3=dfCustomer.join(d2,'CustomerID','left_outer').select('SalesPerson','TotalNetPrice')\
+             .groupBy('SalesPerson').sum('TotalNetPrice')
+d3.count()
+d3.show()
+
+
+from operator import add
+counts = pairs.map(lambda x:(x,1))\
+              .reduceByKey(add)
+
+counts_sort = counts.sortBy(lambda a: -a[1])
+mostFrequent10 = map(lambda x: x[0], counts_sort.take(10))
+print mostFrequent10
